@@ -28,7 +28,6 @@
 // @ is an alias to /src
 import EventCard from '@/components/EventCard.vue'
 import EventService from '@/services/EventService.js'
-import { watchEffect } from '@vue/runtime-core'
 // import axios from 'axios'
 export default {
   name: 'EventList',
@@ -47,18 +46,30 @@ export default {
       totalEvents: 0 // <--- Added this to store totalEvents
     }
   },
-  created() {
-    watchEffect(() => {
-      EventService.getEvents(2, this.page)
-        .then((response) => {
-          this.events = response.data
-          this.totalEvents = response.headers['x-total-count'] // <--- Store it
+  beforeRouteEnter(routeTo, routeFrom, next) {
+    EventService.getEvents(2, parseInt(routeTo.query.page) || 1)
+      .then((response) => {
+        next((comp) => {
+          comp.events = response.data
+          comp.totalEvents = response.headers['x-total-count'] // <--- Store it
         })
-        .catch((error) => {
-          console.log(error)
-        })
-    })
+      })
+      .catch(() => {
+        next({ name: 'NetworkError' })
+      })
   },
+  beforeRouteUpdate(routeTo, routeFrom, next) {
+    EventService.getEvents(2, parseInt(routeTo.query.page) || 1)
+      .then((response) => {
+        this.events = response.data
+        this.totalEvents = response.headers['x-total-count'] // <--- Store it
+        next()
+      })
+      .catch(() => {
+        next({ name: 'NetworkError' })
+      })
+  },
+
   computed: {
     hasNextPage() {
       // First, calculate total pages
